@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Inicio{% endblock %}
+{% block content %}
+  <h1>Dashboard</h1>
+  <p>Hoy es <strong>{{ today }}</strong>. Ciudad por defecto: <strong>{{ city }}</strong>.</p>
+  <section class="cards">
+    <div class="card">
+      <h3>Próximos pasos</h3>
+      <ul>
+        <li>Base de datos SQLite para eventos</li>
+        <li>CRUD de eventos y lista de invitados</li>
+        <li>Check-in en puerta y ventas rápidas</li>
+        <li>Reportes con Pandas/Matplotlib</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Atajos</h3>
+      <p><a class="btn" href="{{ url_for('eventos') }}">Ir a Eventos</a></p>
+    </div>
+  </section>
+{% endblock %}

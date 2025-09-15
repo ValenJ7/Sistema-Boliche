@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Eventos{% endblock %}
+{% block content %}
+  <h1>Eventos</h1>
+  <p>Lista de ejemplo (en el próximo paso vendrá desde la base de datos).</p>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Fecha</th>
+        <th>Capacidad</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in eventos %}
+      <tr>
+        <td>{{ e.nombre }}</td>
+        <td>{{ e.fecha }}</td>
+        <td>{{ e.capacidad }}</td>
+        <td><span class="badge">{{ e.estado }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
