@@ -1,26 +1,51 @@
-{% extends "base.html" %}
-{% block title %}Eventos{% endblock %}
-{% block content %}
-  <h1>Eventos</h1>
-  <p>Lista de ejemplo (en el próximo paso vendrá desde la base de datos).</p>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Nombre</th>
-        <th>Fecha</th>
-        <th>Capacidad</th>
-        <th>Estado</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for e in eventos %}
-      <tr>
-        <td>{{ e.nombre }}</td>
-        <td>{{ e.fecha }}</td>
-        <td>{{ e.capacidad }}</td>
-        <td><span class="badge">{{ e.estado }}</span></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-{% endblock %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Eventos — {{ APP_NAME }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Gestión de Eventos</h1>
+    <nav>
+      <a href="{{ url_for('dashboard') }}">Inicio</a> |
+      <a href="{{ url_for('eventos') }}">Eventos</a> |
+      <a href="{{ url_for('acerca') }}">Acerca</a>
+    </nav>
+  </header>
+
+  <main>
+    <p>
+      <a href="{{ url_for('nuevo_evento') }}" class="btn">➕ Nuevo evento</a>
+    </p>
+
+    {% if eventos %}
+      <table border="1" cellpadding="5" cellspacing="0">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Fecha</th>
+            <th>Capacidad</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in eventos %}
+          <tr>
+            <td>{{ e[0] }}</td>
+            <td>{{ e[1] }}</td>
+            <td>{{ e[2] }}</td>
+            <td>{{ e[3] }}</td>
+            <td>{{ e[4] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No hay eventos registrados todavía.</p>
+    {% endif %}
+  </main>
+</body>
+</html>

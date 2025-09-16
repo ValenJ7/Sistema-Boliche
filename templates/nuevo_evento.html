@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Nuevo Evento — {{ APP_NAME }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Nuevo Evento</h1>
+    <nav>
+      <a href="{{ url_for('dashboard') }}">Inicio</a> |
+      <a href="{{ url_for('eventos') }}">Eventos</a> |
+      <a href="{{ url_for('acerca') }}">Acerca</a>
+    </nav>
+  </header>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flashes">
+          {% for category, message in messages %}
+            <li class="{{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('nuevo_evento') }}" method="POST">
+      <label for="nombre">Nombre del evento:</label><br>
+      <input type="text" id="nombre" name="nombre" required><br><br>
+
+      <label for="fecha">Fecha:</label><br>
+      <input type="date" id="fecha" name="fecha" required><br><br>
+
+      <label for="hora">Hora</label>
+      <input type="time" id="hora" name="hora" required>
+
+      <label for="capacidad">Capacidad:</label><br>
+      <input type="number" id="capacidad" name="capacidad" min="1" required><br><br>
+
+      <label for="estado">Estado:</label><br>
+      <select id="estado" name="estado">
+        <option value="activo">Activo</option>
+        <option value="inactivo">Inactivo</option>
+      </select><br><br>
+
+      <button type="submit">Guardar evento</button>
+      <a href="{{ url_for('eventos') }}">Cancelar</a>
+    </form>
+  </main>
+</body>
+</html>
+    
