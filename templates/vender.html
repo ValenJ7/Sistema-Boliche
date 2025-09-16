@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Vender Tragos{% endblock %}
+{% block content %}
+<div class="container">
+  <h2>Vender — {{ evento.nombre }} ({{ evento.fecha }} {{ evento.hora }})</h2>
+
+  <!-- mensajes -->
+  <div class="flash-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="flash flash-{{category}}">
+            <span>{{ msg }}</span>
+            <button class="flash-close" onclick="this.parentElement.style.display='none'">&times;</button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <form method="post" id="ventaForm">
+    <table>
+      <thead>
+        <tr>
+          <th>Trago</th>
+          <th>Precio</th>
+          <th>Cantidad</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in catalogo %}
+        <tr>
+          <td>{{ t.nombre }}</td>
+          <td>${{ "%.2f"|format(t.precio) }}</td>
+          <td>
+            <div class="qty" style="display:flex; gap:8px; align-items:center;">
+              <button type="button" class="btn btn-sm btn-secondary btn-minus" data-id="{{ t.id }}" style="width:32px;height:32px;border-radius:50%;padding:0;">−</button>
+              <span id="cant_{{ t.id }}">0</span>
+              <button type="button" class="btn btn-sm btn-plus" data-id="{{ t.id }}" style="width:32px;height:32px;border-radius:50%;padding:0;">+</button>
+              <input type="hidden" name="cantidad_{{ t.id }}" id="input_{{ t.id }}" value="0">
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:20px;">Total: $<span id="total">0.00</span></h3>
+    <p id="resumenItems" style="opacity:.8;margin-top:6px;"></p>
+
+    <button type="submit" id="btnConfirmar" class="btn" disabled>Confirmar venta</button>
+    <button type="button" class="btn btn-secondary" id="btnReset">Limpiar</button>
+    <a href="{{ url_for('ver_tragos', event_id=evento.id) }}" class="btn btn-secondary">Ver registro</a>
+    <a href="{{ url_for('eventos') }}" class="btn btn-secondary">Volver</a>
+  </form>
+</div>
+
+<!-- JSON embebido (evita errores del editor) -->
+<script type="application/json" id="catalogo-json">{{ catalogo | tojson }}</script>
+
+<script>
+  const catalogo = JSON.parse(document.getElementById('catalogo-json').textContent);
+  const precios = Object.fromEntries(catalogo.map(t => [t.id, t.precio]));
+  const cantidades = Object.fromEntries(catalogo.map(t => [t.id, 0]));
+
+  function render(id) {
+    document.getElementById("cant_" + id).textContent = cantidades[id];
+    document.getElementById("input_" + id).value = cantidades[id];
+    actualizarTotal();
+  }
+
+  function actualizarTotal() {
+    let total = 0, items = 0;
+    for (const [id, qty] of Object.entries(cantidades)) {
+      total += qty * precios[id];
+      items += qty;
+    }
+    document.getElementById("total").textContent = total.toFixed(2);
+    document.getElementById("btnConfirmar").disabled = total <= 0;
+    document.getElementById("resumenItems").textContent = items > 0 ? `${items} ítem(s)` : '';
+  }
+
+  document.querySelectorAll(".btn-plus").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      cantidades[id] = (cantidades[id] || 0) + 1;
+      render(id);
+    });
+  });
+
+  document.querySelectorAll(".btn-minus").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      cantidades[id] = Math.max(0, (cantidades[id] || 0) - 1);
+      render(id);
+    });
+  });
+
+  document.getElementById("btnReset").addEventListener("click", () => {
+    for (const id of Object.keys(cantidades)) {
+      cantidades[id] = 0;
+      document.getElementById("cant_" + id).textContent = "0";
+      document.getElementById("input_" + id).value = "0";
+    }
+    actualizarTotal();
+  });
+
+  actualizarTotal();
+</script>
+{% endblock %}

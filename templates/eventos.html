@@ -6,46 +6,83 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body>
-  <header>
-    <h1>Gestión de Eventos</h1>
-    <nav>
-      <a href="{{ url_for('dashboard') }}">Inicio</a> |
-      <a href="{{ url_for('eventos') }}">Eventos</a> |
+  <nav>
+    <div><strong>{{ APP_NAME }}</strong></div>
+    <div>
+      <a href="{{ url_for('dashboard') }}">Inicio</a>
+      <a href="{{ url_for('eventos') }}">Eventos</a>
       <a href="{{ url_for('acerca') }}">Acerca</a>
-    </nav>
-  </header>
+    </div>
+  </nav>
 
-  <main>
+  <main class="container">
+    <h1>Gestión de Eventos</h1>
+
+      {% with flashes = get_flashed_messages(with_categories=True) %}
+      {% if flashes %}
+        <div class="flash-container">
+          {% for category, msg in flashes %}
+            <div class="flash {{ 'flash-ok' if category in ['ok','success'] else 'flash-error' }}">
+              <span>{{ msg }}</span>
+              <button type="button" class="flash-close" aria-label="Cerrar">×</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
     <p>
       <a href="{{ url_for('nuevo_evento') }}" class="btn">➕ Nuevo evento</a>
     </p>
 
     {% if eventos %}
-      <table border="1" cellpadding="5" cellspacing="0">
+      <table>
         <thead>
           <tr>
             <th>ID</th>
             <th>Nombre</th>
             <th>Fecha</th>
+            <th>Hora</th>
             <th>Capacidad</th>
             <th>Estado</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
-          {% for e in eventos %}
+        {% for e in eventos %}
           <tr>
-            <td>{{ e[0] }}</td>
-            <td>{{ e[1] }}</td>
-            <td>{{ e[2] }}</td>
-            <td>{{ e[3] }}</td>
-            <td>{{ e[4] }}</td>
+            <td>{{ e['id'] }}</td>
+            <td>{{ e['nombre'] }}</td>
+            <td>{{ e['fecha'] }}</td>
+            <td>{{ e['hora'] or '-' }}</td>
+            <td>{{ e['capacidad'] }}</td>
+            <td>{{ e['estado'] }}</td>
+            <td>
+              <a class="btn btn-sm" href="{{ url_for('editar_evento', event_id=e['id']) }}">Editar</a>
+              <form action="{{ url_for('borrar_evento', event_id=e['id']) }}" method="post" style="display:inline" onsubmit="return confirm('¿Eliminar este evento?');">
+                <button class="btn btn-danger btn-sm" type="submit">Eliminar</button>
+              </form>
+            </td>
           </tr>
-          {% endfor %}
+          {% if evento_es_hoy(e) %}
+            <a href="{{ url_for('vender', event_id=e.id) }}" class="btn btn-sm">Vender</a>
+          {% endif %}
+        {% endfor %}
         </tbody>
       </table>
     {% else %}
       <p>No hay eventos registrados todavía.</p>
     {% endif %}
   </main>
+
+  <script>
+  document.querySelectorAll('.flash').forEach((el) => {
+    const close = el.querySelector('.flash-close');
+    const remove = () => { el.classList.add('hide'); setTimeout(() => el.remove(), 250); };
+    if (close) close.addEventListener('click', remove);
+    setTimeout(remove, 1000); // auto-ocultar a los 1s
+  });
+</script>
+
 </body>
 </html>

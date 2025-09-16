@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Editar evento — {{ APP_NAME }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <nav>
+    <div><strong>{{ APP_NAME }}</strong></div>
+    <div>
+      <a href="{{ url_for('dashboard') }}">Inicio</a>
+      <a href="{{ url_for('eventos') }}">Eventos</a>
+      <a href="{{ url_for('acerca') }}">Acerca</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <h1>Editar evento</h1>
+
+    <form method="post">
+      <label>Nombre del evento:
+        <input type="text" name="nombre" value="{{ e['nombre'] }}" required>
+      </label>
+
+      <label>Fecha:
+        <input type="date" name="fecha" value="{{ e['fecha'] }}" required>
+      </label>
+
+      <label>Hora:
+        <input type="time" name="hora" value="{{ e['hora'] }}">
+      </label>
+
+      <label>Capacidad:
+        <input type="number" name="capacidad" min="0" step="1" value="{{ e['capacidad'] or 0 }}" required>
+      </label>
+
+      <label>Estado:
+        <select name="estado">
+          <option value="activo"   {{ 'selected' if e['estado']=='activo' else '' }}>Activo</option>
+          <option value="inactivo" {{ 'selected' if e['estado']=='inactivo' else '' }}>Inactivo</option>
+        </select>
+      </label>
+
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button type="submit" class="btn">Guardar cambios</button>
+        <a href="{{ url_for('eventos') }}" class="btn btn-secondary">Cancelar</a>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

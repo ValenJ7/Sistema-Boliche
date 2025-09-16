@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Ventas — {{ evento.nombre }}{% endblock %}
+{% block content %}
+<div class="container">
+  <h2>Ventas — {{ evento.nombre }} ({{ evento.fecha }} {{ evento.hora }})</h2>
+
+  <!-- flashes -->
+  <div class="flash-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="flash flash-{{category}}">
+            <span>{{ msg }}</span>
+            <button class="flash-close" onclick="this.parentElement.style.display='none'">&times;</button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <!-- ===== Resumen por trago (global) ===== -->
+  <h3>Resumen por trago</h3>
+  {% if resumen and resumen|length > 0 %}
+    {% set ns = namespace(total=0) %}
+    <table>
+      <thead>
+        <tr>
+          <th>Trago</th>
+          <th>Precio</th>
+          <th>Cant.</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in resumen %}
+          {% set ns.total = ns.total + r.total %}
+          <tr>
+            <td>{{ r.nombre }}</td>
+            <td>${{ "%.2f"|format(r.precio) }}</td>
+            <td>{{ r.cantidad }}</td>
+            <td>${{ "%.2f"|format(r.total) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p style="margin-top:10px;"><strong>Total recaudado:</strong> ${{ "%.2f"|format(ns.total) }}</p>
+  {% else %}
+    <p>Sin ventas aún.</p>
+  {% endif %}
+
+  <!-- ===== Lotes de venta ===== -->
+  <h3 style="margin-top:22px;">Lotes de venta</h3>
+  {% if batches and batches|length > 0 %}
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha/Hora</th>
+          <th>Ítems</th>
+          <th>Total</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in batches %}
+        <tr>
+          <td>{{ b.created_at }}</td>
+          <td>{{ b.items_count }}</td>
+          <td>${{ "%.2f"|format(b.total_amount) }}</td>
+          <td>
+            <button class="btn btn-sm btn-secondary btn-toggle" type="button" data-id="{{ b.id }}">
+              Ver / Ocultar
+            </button>
+          </td>
+        </tr>
+        <tr id="det_{{ b.id }}" style="display:none;">
+          <td colspan="4">
+            {% set items = batches_items[b.id] %}
+            {% if items and items|length > 0 %}
+              <table>
+                <thead>
+                  <tr>
+                    <th>Trago</th>
+                    <th>Precio</th>
+                    <th>Cantidad</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for it in items %}
+                  <tr>
+                    <td>{{ it.nombre }}</td>
+                    <td>${{ "%.2f"|format(it.precio) }}</td>
+                    <td>{{ it.cantidad }}</td>
+                    <td>${{ "%.2f"|format(it.precio * it.cantidad) }}</td>
+                    <td>
+                      <form action="{{ url_for('eliminar_trago', drink_id=it.id) }}" method="post" style="display:inline;">
+                        <button class="btn btn-sm btn-danger">Eliminar</button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+              <em>Sin items en este lote.</em>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No hay lotes todavía.</p>
+  {% endif %}
+
+  <div style="margin-top:14px;">
+    {% if evento_es_hoy(evento) %}
+      <a href="{{ url_for('vender', event_id=evento.id) }}" class="btn">Vender</a>
+    {% endif %}
+    <a href="{{ url_for('eventos') }}" class="btn btn-secondary">Volver</a>
+  </div>
+</div>
+
+<script>
+  // Toggle robusto: usa computed style y fuerza 'table-row'/'none'
+  document.querySelectorAll('.btn-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const row = document.getElementById('det_' + id);
+      const isHidden = window.getComputedStyle(row).display === 'none';
+      row.style.display = isHidden ? 'table-row' : 'none';
+    });
+  });
+</script>
+{% endblock %}

@@ -1,21 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Inicio{% endblock %}
 {% block content %}
-  <h1>Dashboard</h1>
+<div class="container">
+  <h1>Bienvenido a {{ APP_NAME }}</h1>
   <p>Hoy es <strong>{{ today }}</strong>. Ciudad por defecto: <strong>{{ city }}</strong>.</p>
-  <section class="cards">
-    <div class="card">
-      <h3>Próximos pasos</h3>
-      <ul>
-        <li>Base de datos SQLite para eventos</li>
-        <li>CRUD de eventos y lista de invitados</li>
-        <li>Check-in en puerta y ventas rápidas</li>
-        <li>Reportes con Pandas/Matplotlib</li>
-      </ul>
+
+  <hr style="margin: 20px 0; border: 1px solid #333;">
+
+  <h2>Evento de hoy</h2>
+  {% if evento_hoy %}
+    <div class="flash" style="border-left: 4px solid #bb86fc;">
+      <div>
+        <strong>{{ evento_hoy.nombre }}</strong><br>
+        Fecha: {{ evento_hoy.fecha }} — Hora: {{ evento_hoy.hora }}<br>
+        Capacidad: {{ evento_hoy.capacidad }}
+      </div>
+      <div>
+        <a href="{{ url_for('vender', event_id=evento_hoy.id) }}" class="btn">Vender</a>
+        <a href="{{ url_for('ver_tragos', event_id=evento_hoy.id) }}" class="btn btn-secondary">Ver ventas</a>
+      </div>
     </div>
-    <div class="card">
-      <h3>Atajos</h3>
-      <p><a class="btn" href="{{ url_for('eventos') }}">Ir a Eventos</a></p>
-    </div>
-  </section>
+  {% else %}
+    <p>No hay eventos programados para hoy.</p>
+  {% endif %}
+
+  <hr style="margin: 20px 0; border: 1px solid #333;">
+
+  <p>
+    <a class="btn" href="{{ url_for('eventos') }}">Ir a Gestión de Eventos</a>
+  </p>
+</div>
 {% endblock %}

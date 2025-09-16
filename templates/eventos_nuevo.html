@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Nuevo evento — {{ APP_NAME }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <nav>
+    <div><strong>{{ APP_NAME }}</strong></div>
+    <div>
+      <a href="{{ url_for('dashboard') }}">Inicio</a>
+      <a href="{{ url_for('eventos') }}">Eventos</a>
+      <a href="{{ url_for('acerca') }}">Acerca</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <h1>Nuevo Evento</h1>
+
+    {# flashes #}
+    {% with msgs = get_flashed_messages(with_categories=True) %}
+      {% if msgs %}
+        <ul class="flashes">
+          {% for cat, msg in msgs %}
+            <li class="flash {{ cat }}">{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="{{ url_for('nuevo_evento') }}">
+      <div>
+        <label for="nombre">Nombre del evento</label>
+        <input id="nombre" name="nombre" type="text" placeholder="Ej: Fiesta Retro" required>
+      </div>
+
+      <div>
+        <label for="fecha">Fecha</label>
+        <input id="fecha" name="fecha" type="date" required>
+      </div>
+
+      <div>
+        <label for="hora">Hora</label>
+        <input id="hora" name="hora" type="time" step="900">  <!-- opcional -->
+      </div>
+
+      <div>
+        <label for="capacidad">Capacidad</label>
+        <input id="capacidad" name="capacidad" type="number" min="0" step="1" placeholder="0">
+      </div>
+
+      <div>
+        <label for="estado">Estado</label>
+        <select id="estado" name="estado">
+          <option value="activo" selected>Activo</option>
+          <option value="inactivo">Inactivo</option>
+        </select>
+      </div>
+
+      <div style="margin-top:10px">
+        <button type="submit" class="btn">Guardar evento</button>
+        <a href="{{ url_for('eventos') }}" class="btn" style="background:#444">Cancelar</a>
+      </div>
+    </form>
+  </main>
+</body>
+</html>
