@@ -1,11 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Ventas — {{ evento.nombre }}{% endblock %}
 {% block content %}
-<div class="container">
-  <h2>Ventas — {{ evento.nombre }} ({{ evento.fecha }} {{ evento.hora }})</h2>
+
+<!-- Acciones arriba a la izquierda -->
+<div class="top-actions" style="margin:8px 0 0 24px; display:flex; gap:8px; align-items:center;">
+  <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-size:.85rem;">← Inicio</a>
+</div>
+
+<!-- Wrapper centrado -->
+<div class="container" style="max-width:980px; margin:0 auto;">
+  <h2 style="text-align:center;">Ventas — {{ evento.nombre }} ({{ evento.fecha }} {{ evento.hora }})</h2>
 
   <!-- flashes -->
-  <div class="flash-container">
+  <div class="flash-container" style="max-width:900px; margin: 12px auto;">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, msg in messages %}
@@ -19,106 +26,109 @@
   </div>
 
   <!-- ===== Resumen por trago (global) ===== -->
-  <h3>Resumen por trago</h3>
-  {% if resumen and resumen|length > 0 %}
-    {% set ns = namespace(total=0) %}
-    <table>
-      <thead>
-        <tr>
-          <th>Trago</th>
-          <th>Precio</th>
-          <th>Cant.</th>
-          <th>Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in resumen %}
-          {% set ns.total = ns.total + r.total %}
-          <tr>
-            <td>{{ r.nombre }}</td>
-            <td>${{ "%.2f"|format(r.precio) }}</td>
-            <td>{{ r.cantidad }}</td>
-            <td>${{ "%.2f"|format(r.total) }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <p style="margin-top:10px;"><strong>Total recaudado:</strong> ${{ "%.2f"|format(ns.total) }}</p>
-  {% else %}
-    <p>Sin ventas aún.</p>
-  {% endif %}
+  <div style="max-width:900px; margin: 0 auto;">
+    <h3>Resumen por trago</h3>
+    {% if resumen and resumen|length > 0 %}
+      {% set ns = namespace(total=0) %}
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="text-align:left; padding:12px 16px;">Trago</th>
+              <th style="text-align:right; padding:12px 16px;">Precio</th>
+              <th style="text-align:center; padding:12px 16px;">Cant.</th>
+              <th style="text-align:right; padding:12px 16px;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in resumen %}
+              {% set ns.total = ns.total + r.total %}
+              <tr>
+                <td style="padding:12px 16px;">{{ r.nombre }}</td>
+                <td style="padding:12px 16px; text-align:right;">${{ "%.2f"|format(r.precio) }}</td>
+                <td style="padding:12px 16px; text-align:center;">{{ r.cantidad }}</td>
+                <td style="padding:12px 16px; text-align:right;">${{ "%.2f"|format(r.total) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:10px;"><strong>Total recaudado:</strong> ${{ "%.2f"|format(ns.total) }}</p>
+    {% else %}
+      <p>Sin ventas aún.</p>
+    {% endif %}
+  </div>
 
   <!-- ===== Lotes de venta ===== -->
-  <h3 style="margin-top:22px;">Lotes de venta</h3>
-  {% if batches and batches|length > 0 %}
-    <table>
-      <thead>
-        <tr>
-          <th>Fecha/Hora</th>
-          <th>Ítems</th>
-          <th>Total</th>
-          <th>Detalle</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for b in batches %}
-        <tr>
-          <td>{{ b.created_at }}</td>
-          <td>{{ b.items_count }}</td>
-          <td>${{ "%.2f"|format(b.total_amount) }}</td>
-          <td>
-            <button class="btn btn-sm btn-secondary btn-toggle" type="button" data-id="{{ b.id }}">
-              Ver / Ocultar
-            </button>
-          </td>
-        </tr>
-        <tr id="det_{{ b.id }}" style="display:none;">
-          <td colspan="4">
-            {% set items = batches_items[b.id] %}
-            {% if items and items|length > 0 %}
-              <table>
-                <thead>
-                  <tr>
-                    <th>Trago</th>
-                    <th>Precio</th>
-                    <th>Cantidad</th>
-                    <th>Total</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for it in items %}
-                  <tr>
-                    <td>{{ it.nombre }}</td>
-                    <td>${{ "%.2f"|format(it.precio) }}</td>
-                    <td>{{ it.cantidad }}</td>
-                    <td>${{ "%.2f"|format(it.precio * it.cantidad) }}</td>
-                    <td>
-                      <form action="{{ url_for('eliminar_trago', drink_id=it.id) }}" method="post" style="display:inline;">
-                        <button class="btn btn-sm btn-danger">Eliminar</button>
-                      </form>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            {% else %}
-              <em>Sin items en este lote.</em>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No hay lotes todavía.</p>
-  {% endif %}
-
-  <div style="margin-top:14px;">
-    {% if evento_es_hoy(evento) %}
-      <a href="{{ url_for('vender', event_id=evento.id) }}" class="btn">Vender</a>
+  <div style="max-width:900px; margin: 22px auto 0;">
+    <h3>Lotes de venta</h3>
+    {% if batches and batches|length > 0 %}
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="text-align:left; padding:12px 16px;">Fecha/Hora</th>
+              <th style="text-align:center; padding:12px 16px;">Ítems</th>
+              <th style="text-align:right; padding:12px 16px;">Total</th>
+              <th style="text-align:center; padding:12px 16px;">Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in batches %}
+            <tr>
+              <td style="padding:12px 16px;">{{ b.created_at }}</td>
+              <td style="padding:12px 16px; text-align:center;">{{ b.items_count }}</td>
+              <td style="padding:12px 16px; text-align:right;">${{ "%.2f"|format(b.total_amount) }}</td>
+              <td style="padding:12px 16px; text-align:center;">
+                <button class="btn btn-sm btn-secondary btn-toggle" type="button" data-id="{{ b.id }}">
+                  Ver / Ocultar
+                </button>
+              </td>
+            </tr>
+            <tr id="det_{{ b.id }}" style="display:none;">
+              <td colspan="4" style="padding:0 0 12px;">
+                {% set items = batches_items[b.id] %}
+                {% if items and items|length > 0 %}
+                  <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; margin-top:8px;">
+                      <thead>
+                        <tr>
+                          <th style="text-align:left; padding:10px 14px;">Trago</th>
+                          <th style="text-align:right; padding:10px 14px;">Precio</th>
+                          <th style="text-align:center; padding:10px 14px;">Cantidad</th>
+                          <th style="text-align:right; padding:10px 14px;">Total</th>
+                          <th style="text-align:center; padding:10px 14px;">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for it in items %}
+                        <tr>
+                          <td style="padding:10px 14px;">{{ it.nombre }}</td>
+                          <td style="padding:10px 14px; text-align:right;">${{ "%.2f"|format(it.precio) }}</td>
+                          <td style="padding:10px 14px; text-align:center;">{{ it.cantidad }}</td>
+                          <td style="padding:10px 14px; text-align:right;">${{ "%.2f"|format(it.precio * it.cantidad) }}</td>
+                          <td style="padding:10px 14px; text-align:center;">
+                            <form action="{{ url_for('eliminar_trago', drink_id=it.id) }}" method="post" style="display:inline;">
+                              <button class="btn btn-sm btn-danger">Eliminar</button>
+                            </form>
+                          </td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                {% else %}
+                  <em style="display:block; padding:10px 14px;">Sin items en este lote.</em>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>No hay lotes todavía.</p>
     {% endif %}
-    <a href="{{ url_for('eventos') }}" class="btn btn-secondary">Volver</a>
   </div>
 </div>
 

@@ -18,7 +18,7 @@
   <main class="container">
     <h1>Gestión de Eventos</h1>
 
-      {% with flashes = get_flashed_messages(with_categories=True) %}
+    {% with flashes = get_flashed_messages(with_categories=True) %}
       {% if flashes %}
         <div class="flash-container">
           {% for category, msg in flashes %}
@@ -64,9 +64,6 @@
               </form>
             </td>
           </tr>
-          {% if evento_es_hoy(e) %}
-            <a href="{{ url_for('vender', event_id=e.id) }}" class="btn btn-sm">Vender</a>
-          {% endif %}
         {% endfor %}
         </tbody>
       </table>
@@ -80,9 +77,9 @@
     const close = el.querySelector('.flash-close');
     const remove = () => { el.classList.add('hide'); setTimeout(() => el.remove(), 250); };
     if (close) close.addEventListener('click', remove);
-    setTimeout(remove, 1000); // auto-ocultar a los 1s
+    setTimeout(remove, 4000); // más tiempo para leer mensajes detallados
   });
-</script>
+  </script>
 
 </body>
 </html>

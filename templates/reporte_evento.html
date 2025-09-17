@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Reporte — {{ evento.nombre }}{% endblock %}
+{% block content %}
+<div class="container">
+  <h2>Reporte — {{ evento.nombre }} ({{ evento.fecha }} {{ evento.hora }})</h2>
+
+  {% if report_img %}
+    <img src="data:image/png;base64,{{ report_img }}" alt="Reporte de ventas" style="max-width:100%; height:auto; border-radius:8px; display:block;">
+  {% else %}
+    <p>No hay datos para generar el reporte.</p>
+  {% endif %}
+
+  <h3 style="margin-top: 16px;">Resumen por trago</h3>
+  {% if resumen and resumen|length > 0 %}
+    {% set ns = namespace(total=0) %}
+    <table>
+      <thead>
+        <tr>
+          <th>Trago</th>
+          <th>Precio</th>
+          <th>Cant.</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in resumen %}
+          {% set ns.total = ns.total + r.total %}
+          <tr>
+            <td>{{ r.nombre }}</td>
+            <td>${{ "%.2f"|format(r.precio) }}</td>
+            <td>{{ r.cantidad }}</td>
+            <td>${{ "%.2f"|format(r.total) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p style="margin-top:10px;"><strong>Total recaudado:</strong> ${{ "%.2f"|format(ns.total) }}</p>
+  {% else %}
+    <p>Sin ventas aún.</p>
+  {% endif %}
+
+  <div style="margin-top:14px;">
+    <a href="{{ url_for('ver_tragos', event_id=evento.id) }}" class="btn btn-secondary">Ver registro</a>
+    <a href="{{ url_for('eventos') }}" class="btn btn-secondary">Volver</a>
+  </div>
+</div>
+{% endblock %}

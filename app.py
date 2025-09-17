@@ -21,6 +21,13 @@ from db import (
     fetch_drinks_by_batch,
 )
 
+# ====== extra imports para reporte ======
+import io, base64
+import pandas as pd
+import matplotlib
+matplotlib.use("Agg")  # backend sin GUI
+import matplotlib.pyplot as plt
+
 # Cargar variables del entorno
 load_dotenv()
 
@@ -52,6 +59,37 @@ def evento_es_hoy(evento):
     fecha_evento = datetime.strptime(evento["fecha"], "%Y-%m-%d").date()
     return fecha_evento == hoy
 
+def build_event_report_image(event_id: int) -> str | None:
+    """Genera gráfico PNG (base64) con cantidad vendida por trago para un evento."""
+    resumen = fetch_drinks_summary_by_event(event_id)
+    if not resumen:
+        return None
+
+    df = pd.DataFrame(resumen)
+    if df.empty:
+        return None
+
+    df["nombre"] = df["nombre"].astype(str)
+    df["cantidad"] = pd.to_numeric(df["cantidad"], errors="coerce").fillna(0).astype(int)
+    df = df.sort_values("cantidad", ascending=False)
+
+    # Paleta simple y legible
+    palette = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#84cc16", "#f97316"]
+    colors = [palette[i % len(palette)] for i in range(len(df))]
+
+    fig, ax = plt.subplots(figsize=(6.5, 3.6), dpi=150)
+    ax.bar(df["nombre"], df["cantidad"], color=colors)
+    ax.set_title("Cantidad vendida por trago")
+    ax.set_xlabel("Trago")
+    ax.set_ylabel("Cantidad")
+    ax.tick_params(axis="x", rotation=45, labelsize=8)
+    fig.tight_layout()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
+    plt.close(fig)
+    return base64.b64encode(buf.getvalue()).decode("ascii")
+
 @app.context_processor
 def inject_globals():
     return dict(APP_NAME=APP_NAME, evento_es_hoy=evento_es_hoy)
@@ -63,8 +101,25 @@ def inject_globals():
 def dashboard():
     today = datetime.now().strftime("%Y-%m-%d")
     eventos = fetch_all_events()
-    evento_hoy = next((e for e in eventos if e["fecha"] == today), None)
-    return render_template("index.html", today=today, city=DEFAULT_CITY, evento_hoy=evento_hoy)
+
+    # Todos los eventos de hoy
+    eventos_hoy = [e for e in eventos if e["fecha"] == today]
+
+    # Generar reportes por evento
+    reportes = {}
+    for ev in eventos_hoy:
+        img = build_event_report_image(ev["id"])
+        if img:
+            reportes[ev["id"]] = img
+
+    return render_template(
+        "index.html",
+        today=today,
+        city=DEFAULT_CITY,
+        eventos_hoy=eventos_hoy,
+        reportes=reportes,
+    )
+
 
 # ========================
 # Eventos
@@ -77,19 +132,27 @@ def eventos():
 @app.route("/eventos/nuevo", methods=["GET", "POST"], endpoint="nuevo_evento")
 def crear_evento():
     if request.method == "POST":
-        nombre    = request.form.get("nombre", "").strip()
-        fecha     = request.form.get("fecha")
-        hora      = request.form.get("hora") or None
-        capacidad = int(request.form.get("capacidad") or 0)
+        nombre    = (request.form.get("nombre") or "").strip()
+        fecha     = (request.form.get("fecha") or "").strip()
+        hora      = (request.form.get("hora") or "").strip()
+        capacidad_raw = request.form.get("capacidad", "").strip()
         estado    = request.form.get("estado", "activo")
 
-        if not nombre or not fecha:
-            flash("Nombre y fecha son obligatorios.", "error")
-            return render_template("eventos_nuevo.html")
+        # Normalizar capacidad
+        try:
+            capacidad = int(capacidad_raw) if capacidad_raw != "" else 0
+        except ValueError:
+            capacidad = -1  # forzar error
 
-        insert_event(nombre, fecha, hora, capacidad, estado)
-        flash("Evento creado con éxito", "ok")
-        return redirect(url_for("eventos"))
+        try:
+            insert_event(nombre, fecha, hora, capacidad, estado)
+            flash("Evento creado con éxito.", "success")
+            return redirect(url_for("eventos"))
+        except ValueError as ve:
+            flash(str(ve), "error")
+            return render_template("eventos_nuevo.html",
+                                   form={"nombre": nombre, "fecha": fecha, "hora": hora,
+                                         "capacidad": capacidad_raw, "estado": estado})
 
     return render_template("eventos_nuevo.html")
 
@@ -97,30 +160,40 @@ def crear_evento():
 def editar_evento(event_id):
     e = fetch_event_by_id(event_id)
     if not e:
-        flash("Evento no encontrado", "error")
+        flash("Evento no encontrado.", "error")
         return redirect(url_for("eventos"))
 
     if request.method == "POST":
-        nombre    = request.form.get("nombre", "").strip()
-        fecha     = request.form.get("fecha")
-        hora      = request.form.get("hora") or None
-        capacidad = int(request.form.get("capacidad") or 0)
+        nombre    = (request.form.get("nombre") or "").strip()
+        fecha     = (request.form.get("fecha") or "").strip()
+        hora      = (request.form.get("hora") or "").strip()
+        capacidad_raw = request.form.get("capacidad", "").strip()
         estado    = request.form.get("estado", "activo")
 
-        if not nombre or not fecha:
-            flash("Nombre y fecha son obligatorios.", "error")
-            return render_template("eventos_editar.html", e=e)
+        try:
+            capacidad = int(capacidad_raw) if capacidad_raw != "" else 0
+        except ValueError:
+            capacidad = -1
 
-        update_event(event_id, nombre, fecha, hora, capacidad, estado)
-        flash("Evento actualizado", "ok")
-        return redirect(url_for("eventos"))
+        try:
+            update_event(event_id, nombre, fecha, hora, capacidad, estado)
+            flash("Evento actualizado.", "success")
+            return redirect(url_for("eventos"))
+        except ValueError as ve:
+            flash(str(ve), "error")
+            # Reinyectar valores en el formulario
+            e = {
+                "id": event_id, "nombre": nombre, "fecha": fecha, "hora": hora,
+                "capacidad": capacidad_raw, "estado": estado
+            }
+            return render_template("eventos_editar.html", e=e)
 
     return render_template("eventos_editar.html", e=e)
 
 @app.post("/eventos/<int:event_id>/borrar")
 def borrar_evento(event_id):
     delete_event(event_id)
-    flash("Evento eliminado", "ok")
+    flash("Evento eliminado.", "success")
     return redirect(url_for("eventos"))
 
 # ========================
@@ -130,7 +203,7 @@ def borrar_evento(event_id):
 def vender(event_id):
     e = fetch_event_by_id(event_id)
     if not e:
-        flash("Evento no encontrado", "error")
+        flash("Evento no encontrado.", "error")
         return redirect(url_for("eventos"))
 
     if not evento_es_hoy(e):
@@ -138,22 +211,29 @@ def vender(event_id):
         return redirect(url_for("eventos"))
 
     if request.method == "POST":
-        # Recolectar cantidades
         registros = []
         for item in catalogo_tragos:
-            cant = int(request.form.get(f"cantidad_{item['id']}", 0))
+            try:
+                cant = int(request.form.get(f"cantidad_{item['id']}", 0))
+            except ValueError:
+                cant = 0
             if cant > 0:
                 registros.append((item["nombre"], item["precio"], cant))
 
-        if registros:
-            batch_id = create_sale_batch(event_id)
-            for nombre, precio, cantidad in registros:
-                insert_drink(event_id, nombre, precio, cantidad, batch_id=batch_id)
-            flash("Ventas registradas con éxito", "ok")
-        else:
-            flash("No se registraron ventas", "error")
+        if not registros:
+            flash("No se registró ninguna bebida. Seleccioná al menos una cantidad.", "error")
+            return redirect(url_for("vender", event_id=event_id))
 
-        # Quedarnos en /vender mostrando flash
+        # Crear batch y guardar ventas
+        batch_id = create_sale_batch(event_id)
+        for nombre, precio, cantidad in registros:
+            insert_drink(event_id, nombre, precio, cantidad, batch_id=batch_id)
+
+        # Resumen claro: "3 Fernet con Coca, 2 Cervezas"
+        partes = [f"{cantidad} {nombre}" for (nombre, _precio, cantidad) in registros]
+        resumen = ", ".join(partes)
+
+        flash(f"Venta realizada con éxito – {resumen}.", "success")
         return redirect(url_for("vender", event_id=event_id))
 
     return render_template("vender.html", evento=e, catalogo=catalogo_tragos)
@@ -162,19 +242,12 @@ def vender(event_id):
 def ver_tragos(event_id):
     e = fetch_event_by_id(event_id)
     if not e:
-        flash("Evento no encontrado", "error")
+        flash("Evento no encontrado.", "error")
         return redirect(url_for("eventos"))
 
-    # Resumen por trago (global)
     resumen = fetch_drinks_summary_by_event(event_id)
-
-    # Lotes (batches) y sus items
     batches = fetch_batches_by_event(event_id)
-    batches_items = {}
-    for b in batches:
-        batches_items[b["id"]] = fetch_drinks_by_batch(b["id"])
-
-    # Detalle plano (por registro) por si querés filtrar/buscar
+    batches_items = {b["id"]: fetch_drinks_by_batch(b["id"]) for b in batches}
     detalle = fetch_drinks_by_event(event_id)
 
     return render_template(
@@ -183,19 +256,33 @@ def ver_tragos(event_id):
         resumen=resumen,
         batches=batches,
         batches_items=batches_items,
-        tragos=detalle
+        tragos=detalle,
     )
 
 @app.post("/eventos/tragos/<int:drink_id>/eliminar")
 def eliminar_trago(drink_id):
     d = fetch_drink_by_id(drink_id)
     if not d:
-        flash("Venta no encontrada", "error")
+        flash("Venta no encontrada.", "error")
         return redirect(url_for("eventos"))
 
     delete_drink(drink_id)
-    flash("Venta eliminada", "ok")
+    flash("Venta eliminada.", "success")
     return redirect(url_for("ver_tragos", event_id=d["event_id"]))
+
+# ========================
+# Reportes
+# ========================
+@app.route("/reportes/evento/<int:event_id>")
+def reporte_evento(event_id):
+    e = fetch_event_by_id(event_id)
+    if not e:
+        flash("Evento no encontrado.", "error")
+        return redirect(url_for("eventos"))
+
+    resumen = fetch_drinks_summary_by_event(event_id)
+    report_img = build_event_report_image(event_id)
+    return render_template("reporte_evento.html", evento=e, resumen=resumen, report_img=report_img)
 
 # ========================
 # Página "Acerca"

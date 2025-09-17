@@ -1,5 +1,6 @@
 # db.py
 import sqlite3
+from typing import Optional
 
 DB_PATH = "disco.db"
 
@@ -14,18 +15,29 @@ def get_conn():
 def init_db():
     """Crea/actualiza tablas si no existen."""
     with get_conn() as conn:
-        # Eventos
+        # Eventos (incluye CHECK de capacidad >= 0)
         conn.execute("""
         CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre    TEXT NOT NULL,
             fecha     TEXT NOT NULL,   -- YYYY-MM-DD
             hora      TEXT NOT NULL,   -- HH:MM
-            capacidad INTEGER NOT NULL,
+            capacidad INTEGER NOT NULL CHECK (capacidad >= 0),
             estado    TEXT NOT NULL CHECK (estado IN ('activo','inactivo')) DEFAULT 'activo',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
         """)
+
+        # Índice único por (fecha, hora) para evitar duplicados de agenda
+        try:
+            conn.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_events_fecha_hora
+            ON events(fecha, hora);
+            """)
+        except sqlite3.OperationalError:
+            # Si existieran duplicados previos, el índice no se podrá crear.
+            # La validación de app seguirá cubriendo el caso.
+            pass
 
         # Lotes de venta (batches)
         conn.execute("""
@@ -58,6 +70,17 @@ def init_db():
         except sqlite3.OperationalError:
             pass
 
+# ---------- HELPERS ----------
+def exists_event_at(fecha: str, hora: str, exclude_id: Optional[int] = None) -> bool:
+    q = "SELECT 1 FROM events WHERE fecha = ? AND hora = ?"
+    params = [fecha, hora]
+    if exclude_id is not None:
+        q += " AND id <> ?"
+        params.append(exclude_id)
+    with get_conn() as conn:
+        cur = conn.execute(q + " LIMIT 1", tuple(params))
+        return cur.fetchone() is not None
+
 # ---------- EVENTS ----------
 def fetch_all_events():
     with get_conn() as conn:
@@ -79,19 +102,43 @@ def fetch_event_by_id(event_id: int):
         return dict(row) if row else None
 
 def insert_event(nombre: str, fecha: str, hora: str, capacidad: int, estado: str):
+    # Validaciones de negocio
+    nombre = (nombre or "").strip()
+    fecha = (fecha or "").strip()
+    hora = (hora or "").strip()
+
+    if not nombre or not fecha or not hora:
+        raise ValueError("Nombre, fecha y hora son obligatorios.")
+    if capacidad is None or int(capacidad) < 0:
+        raise ValueError("La capacidad no puede ser negativa.")
+    if exists_event_at(fecha, hora):
+        raise ValueError("Ya existe un evento con esa fecha y hora.")
+
     with get_conn() as conn:
         conn.execute("""
             INSERT INTO events (nombre, fecha, hora, capacidad, estado)
             VALUES (?, ?, ?, ?, ?)
-        """, (nombre, fecha, hora, capacidad, estado))
+        """, (nombre, fecha, hora, int(capacidad), estado))
 
 def update_event(event_id: int, nombre: str, fecha: str, hora: str, capacidad: int, estado: str):
+    # Validaciones de negocio
+    nombre = (nombre or "").strip()
+    fecha = (fecha or "").strip()
+    hora = (hora or "").strip()
+
+    if not nombre or not fecha or not hora:
+        raise ValueError("Nombre, fecha y hora son obligatorios.")
+    if capacidad is None or int(capacidad) < 0:
+        raise ValueError("La capacidad no puede ser negativa.")
+    if exists_event_at(fecha, hora, exclude_id=event_id):
+        raise ValueError("Ya existe otro evento con esa fecha y hora.")
+
     with get_conn() as conn:
         conn.execute("""
             UPDATE events
             SET nombre = ?, fecha = ?, hora = ?, capacidad = ?, estado = ?
             WHERE id = ?
-        """, (nombre, fecha, hora, capacidad, estado, event_id))
+        """, (nombre, fecha, hora, int(capacidad), estado, event_id))
 
 def delete_event(event_id: int):
     with get_conn() as conn:
@@ -184,6 +231,6 @@ def fetch_drinks_summary_by_event(event_id: int):
             FROM drinks
             WHERE event_id = ?
             GROUP BY nombre, precio
-            ORDER BY total DESC, nombre ASC
+            ORDER BY cantidad DESC, nombre ASC
         """, (event_id,))
         return [dict(r) for r in cur.fetchall()]

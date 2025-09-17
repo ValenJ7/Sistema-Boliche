@@ -7,27 +7,36 @@
 
   <hr style="margin: 20px 0; border: 1px solid #333;">
 
-  <h2>Evento de hoy</h2>
-  {% if evento_hoy %}
-    <div class="flash" style="border-left: 4px solid #bb86fc;">
-      <div>
-        <strong>{{ evento_hoy.nombre }}</strong><br>
-        Fecha: {{ evento_hoy.fecha }} — Hora: {{ evento_hoy.hora }}<br>
-        Capacidad: {{ evento_hoy.capacidad }}
+  <h2>Eventos de hoy</h2>
+{% if eventos_hoy %}
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px;">
+    {% for ev in eventos_hoy %}
+      <div class="flash" style="border-left: 4px solid #bb86fc; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+        <div>
+          <strong style="font-size:1.1rem;">{{ ev.nombre }}</strong><br>
+          Fecha: {{ ev.fecha }} — Hora: {{ ev.hora }}<br>
+          Capacidad: {{ ev.capacidad }}
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <a href="{{ url_for('vender', event_id=ev.id) }}" class="btn">Vender</a>
+          <a href="{{ url_for('ver_tragos', event_id=ev.id) }}" class="btn btn-secondary">Ver registro</a>
+        </div>
+        {% if reportes.get(ev.id) %}
+          <div style="margin-top: 10px;">
+            <img src="data:image/png;base64,{{ reportes[ev.id] }}" alt="Reporte de ventas" style="max-width:100%; height:auto; border-radius:8px; display:block;">
+          </div>
+        {% else %}
+          <small style="color:#aaa;">Aún no hay ventas para este evento.</small>
+        {% endif %}
       </div>
-      <div>
-        <a href="{{ url_for('vender', event_id=evento_hoy.id) }}" class="btn">Vender</a>
-        <a href="{{ url_for('ver_tragos', event_id=evento_hoy.id) }}" class="btn btn-secondary">Ver ventas</a>
-      </div>
-    </div>
-  {% else %}
-    <p>No hay eventos programados para hoy.</p>
-  {% endif %}
+    {% endfor %}
+  </div>
+{% else %}
+  <p>No hay eventos programados para hoy.</p>
+{% endif %}
+
 
   <hr style="margin: 20px 0; border: 1px solid #333;">
-
-  <p>
-    <a class="btn" href="{{ url_for('eventos') }}">Ir a Gestión de Eventos</a>
-  </p>
+  <p><a class="btn" href="{{ url_for('eventos') }}">Ir a Gestión de Eventos</a></p>
 </div>
 {% endblock %}
